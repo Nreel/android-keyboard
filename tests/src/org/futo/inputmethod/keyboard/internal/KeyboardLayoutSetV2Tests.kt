@@ -3,6 +3,7 @@ package org.futo.inputmethod.keyboard.internal
 import android.graphics.Rect
 import android.test.AndroidTestCase
 import android.view.inputmethod.EditorInfo
+import org.futo.inputmethod.latin.settings.LongPressKeySettings
 import org.futo.inputmethod.v2keyboard.KeyboardLayoutSetV2
 import org.futo.inputmethod.v2keyboard.KeyboardLayoutSetV2Params
 import org.futo.inputmethod.v2keyboard.LayoutManager
@@ -42,5 +43,28 @@ class KeyboardLayoutSetV2Tests : AndroidTestCase() {
         testHeight(67)
         testHeight(185)
         testHeight(4440)
+    }
+
+    fun testUkrainianLayoutLoadsCyrillicEKey() {
+        LayoutManager.init(context)
+        val params = layoutParams.copy(
+            keyboardLayoutSet = "ukrainian",
+            locale = Locale("uk"),
+            longPressKeySettings = LongPressKeySettings.forTest()
+        )
+        val keyboard = KeyboardLayoutSetV2(context, params).getKeyboard(
+            KeyboardLayoutElement(
+                kind = KeyboardLayoutKind.Alphabet0,
+                page = KeyboardLayoutPage.Base
+            )
+        )
+        // A failed element load is swallowed by KeyboardLayoutSet.getKeyboard, which returns the
+        // "error" layout instead. Assert on the real layout's Cyrillic keys so the failure surfaces.
+        val keys = keyboard.sortedKeys
+        val labels = keys.map { it.label }
+        assertTrue(
+            "ukrainian Alphabet0 did not load; got ${keys.size} keys ($labels)",
+            labels.contains("\u0435")
+        )
     }
 }
