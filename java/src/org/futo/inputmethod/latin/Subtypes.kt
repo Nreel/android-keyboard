@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import org.futo.inputmethod.latin.common.Constants
@@ -84,7 +85,16 @@ val MultilingualBucketSetting = SettingsKey(
     emptySet()
 )
 
+val SwitchToPreviousLanguageSetting = SettingsKey(
+    booleanPreferencesKey("switchToPreviousLanguage"),
+    false
+)
+
 object Subtypes {
+    private var lastWrittenLanguage: String? = null
+    private var previousWrittenLanguage: String? = null
+    private var skipLanguageOnNextSwitch: String? = null
+
     // Removes extensions from existing existing subtypes which are not meant to be there
     private fun removeExtensionsIfNecessary(context: Context) {
         val currentSubtypes = context.getSettingBlocking(SubtypesSetting)
@@ -386,6 +396,62 @@ object Subtypes {
 
         context.setSettingBlocking(ActiveSubtype.key, enabledSubtypes[nextIndex])
         return enabledSubtypes[nextIndex]
+    }
+
+    fun onLanguageUsed(context: Context) {
+        val language = context.getSettingBlocking(ActiveSubtype)
+        if(language.isEmpty()) return
+
+        if(language != lastWrittenLanguage) {
+            previousWrittenLanguage = lastWrittenLanguage
+            lastWrittenLanguage = language
+        }
+        skipLanguageOnNextSwitch = null
+    }
+
+    fun switchToPreviousOrNextLanguage(context: Context): String? {
+        if(!context.getSettingBlocking(SwitchToPreviousLanguageSetting)) {
+            return switchToNextLanguage(context, 1)
+        }
+
+        val enabledSubtypes = context.getSettingBlocking(SubtypesSetting).toList()
+        val currentSubtype = context.getSettingBlocking(ActiveSubtype)
+
+        if(enabledSubtypes.isEmpty()) return null
+        if(enabledSubtypes.size == 1 && currentSubtype == enabledSubtypes.first()) {
+            return null
+        }
+
+        val currentIndex = enabledSubtypes.indexOf(currentSubtype)
+        fun advance(skip: String? = null): String {
+            var index = if(currentIndex == -1) 0 else (currentIndex + 1).mod(enabledSubtypes.size)
+            if(skip != null && enabledSubtypes.size >= 3 && enabledSubtypes[index] == skip) {
+                index = (index + 1).mod(enabledSubtypes.size)
+            }
+            return enabledSubtypes[index]
+        }
+
+        val prev = previousWrittenLanguage
+        val skip = skipLanguageOnNextSwitch
+        val target: String = when {
+            prev != null && prev.isNotEmpty() && prev != currentSubtype && prev in enabledSubtypes -> {
+                skipLanguageOnNextSwitch = currentSubtype
+                prev
+            }
+            skip != null && skip.isNotEmpty() && skip != currentSubtype && skip in enabledSubtypes -> {
+                skipLanguageOnNextSwitch = null
+                advance(skip)
+            }
+            else -> {
+                skipLanguageOnNextSwitch = null
+                advance()
+            }
+        }
+
+        previousWrittenLanguage = null
+
+        context.setSettingBlocking(ActiveSubtype.key, target)
+        return target
     }
 
     fun getMultilingualBucket(context: Context, locale: Locale): List<Locale> {

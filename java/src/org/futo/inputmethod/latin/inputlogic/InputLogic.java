@@ -39,6 +39,7 @@ import org.futo.inputmethod.latin.DictionaryFacilitator;
 import org.futo.inputmethod.latin.LastComposedWord;
 import org.futo.inputmethod.latin.NgramContext;
 import org.futo.inputmethod.latin.RichInputConnection;
+import org.futo.inputmethod.latin.Subtypes;
 import org.futo.inputmethod.latin.Suggest;
 import org.futo.inputmethod.latin.Suggest.OnGetSuggestedWordsCallback;
 import org.futo.inputmethod.latin.SuggestedWords;
@@ -694,6 +695,11 @@ public final class InputLogic {
                 handleNonFunctionalEvent(currentEvent, inputTransaction);
             }
             currentEvent = currentEvent.mNextEvent;
+        }
+        // Record that the user is writing in the currently active subtype so the
+        // language-switch key can return to it even before a full word is committed.
+        if (settingsValues.isWordCodePoint(processedEvent.mCodePoint)) {
+            Subtypes.INSTANCE.onLanguageUsed(mImeHelper.getContext());
         }
         // Try to record the word being corrected when the user enters a word character or
         // the backspace key.
@@ -2794,6 +2800,7 @@ public final class InputLogic {
             startTimeMillis = System.currentTimeMillis();
         }
         mConnection.commitText(chosenWordWithSuggestions, 1);
+        Subtypes.INSTANCE.onLanguageUsed(mImeHelper.getContext());
         if (DebugFlags.DEBUG_ENABLED) {
             long runTimeMillis = System.currentTimeMillis() - startTimeMillis;
             Log.d(TAG, "commitChosenWord() : " + runTimeMillis + " ms to run "

@@ -53,6 +53,7 @@ import org.futo.inputmethod.latin.MultilingualBucketSetting
 import org.futo.inputmethod.latin.R
 import org.futo.inputmethod.latin.Subtypes
 import org.futo.inputmethod.latin.SubtypesSetting
+import org.futo.inputmethod.latin.SwitchToPreviousLanguageSetting
 import org.futo.inputmethod.latin.uix.FileKind
 import org.futo.inputmethod.latin.uix.ResourceHelper
 import org.futo.inputmethod.latin.uix.getSetting
@@ -68,6 +69,7 @@ import org.futo.inputmethod.latin.uix.settings.pages.modelmanager.openModelImpor
 import org.futo.inputmethod.latin.uix.settings.useDataStore
 import org.futo.inputmethod.latin.uix.settings.useDataStoreValue
 import org.futo.inputmethod.latin.uix.settings.userSettingNavigationItem
+import org.futo.inputmethod.latin.uix.settings.userSettingToggleDataStore
 import org.futo.inputmethod.latin.uix.theme.Typography
 import org.futo.inputmethod.latin.uix.theme.UixThemeWrapper
 import org.futo.inputmethod.latin.uix.theme.presets.DynamicDarkTheme
@@ -549,10 +551,17 @@ val LanguageSettingsBottom = listOf(
     )
 )
 
+val SwitchToPreviousLanguageSettingEntry = userSettingToggleDataStore(
+    title = R.string.language_settings_switch_to_previous_language,
+    subtitle = R.string.language_settings_switch_to_previous_language_subtitle,
+    setting = SwitchToPreviousLanguageSetting
+)
+
 val LanguageSettingsLite = UserSettingsMenu(
     title = R.string.language_settings_title,
     navPath = "languages", registerNavPath = false,
     settings = LanguageSettingsTop + listOf(
+        SwitchToPreviousLanguageSettingEntry,
         userSettingNavigationItem(
             title = R.string.language_settings_manage_languages_title,
             subtitle = R.string.language_settings_manage_languages_subtitle,
@@ -645,6 +654,10 @@ fun LanguagesScreen(navController: NavHostController = rememberNavController()) 
 
         items(LanguageSettingsTop) {
             it.component()
+        }
+
+        item {
+            SwitchToPreviousLanguageSettingEntry.component()
         }
 
         items(inputMethodKeys) { localeString ->
